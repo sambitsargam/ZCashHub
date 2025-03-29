@@ -44,8 +44,9 @@ export interface FirebaseResponse {
 export async function subscribeToAlerts(
   formData: SubscriptionFormData
 ): Promise<FirebaseResponse> {
-  const response = await fetch(
-    'https://zcash-f9192-default-rtdb.firebaseio.com/alerts.json', // Firebase REST endpoint requires the .json suffix
+  // Save subscription details in Firebase
+  const firebaseResponse = await fetch(
+    'https://zcash-f9192-default-rtdb.firebaseio.com/alerts.json',
     {
       method: 'POST',
       headers: {
@@ -55,9 +56,28 @@ export async function subscribeToAlerts(
     }
   );
 
-  if (!response.ok) {
+  if (!firebaseResponse.ok) {
     throw new Error('Error saving subscription details');
   }
 
-  return response.json();
+  const firebaseData = await firebaseResponse.json();
+
+  // Send registration confirmation via Email & WhatsApp
+  try {
+    await fetch('http://localhost:3000/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        whatsapp: formData.whatsapp
+      })
+    });
+  } catch (error) {
+    console.error('Error sending registration confirmation:', error);
+  }
+
+  return firebaseData;
 }
+
