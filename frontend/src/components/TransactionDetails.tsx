@@ -85,19 +85,19 @@ export const TransactionDetails: React.FC<Props> = ({ data, onClose, isOpen }) =
                   transition={{ delay: 0.2 }}
                   className="bg-red-50 p-4 rounded-lg"
                 >
-                  <h3 className="text-sm font-medium text-red-800 mb-2">Total Sent</h3>
+                  <h3 className="text-sm font-medium text-red-800 mb-2">Total Spend</h3>
                   <p className="text-2xl font-bold text-red-600">{totals.sent} ZEC</p>
                 </motion.div>
 
-                <motion.div
+                {/* <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.3 }}
                   className="bg-purple-50 p-4 rounded-lg"
                 >
                   <h3 className="text-sm font-medium text-purple-800 mb-2">Network Fee</h3>
-                  <p className="text-2xl font-bold text-purple-600">{totals.fee} ZEC</p>
-                </motion.div>
+                  <p className="text-2xl font-bold text-purple-600">{totals.fee} ZEC</p> 
+                </motion.div>  */}
               </div>
 
               <div className="space-y-4">
