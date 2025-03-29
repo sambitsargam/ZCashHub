@@ -5,42 +5,68 @@ const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 
 const app = express();
+app.use(express.json()); // To parse JSON request bodies
 const port = process.env.PORT || 3000;
 
-// Configure the wallet address and API URL.
-const walletAddress = process.env.WALLET_ADDRESS; // e.g., "t1XYZ..."
-const zcashWalletApi = `https://sandbox-api.3xpl.com/zcash/address/${walletAddress}`;
+// Firebase URL for alert subscriptions.
+const firebaseAlertsUrl = process.env.FIREBASE_ALERTS_URL || 'https://zcash-f9192-default-rtdb.firebaseio.com/alerts.json';
 
-// Variable to keep track of the latest transaction seen.
-let lastTransactionId = null;
+// Object to store the last seen transaction for each subscription (keyed by Firebase ID).
+const lastTransactionMap = {};
 
-// Set up the Nodemailer transporter.
+// Set up Nodemailer transporter for email alerts.
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT),
-  secure: process.env.SMTP_SECURE === 'true', // true for port 465, false otherwise
+  secure: process.env.SMTP_SECURE === 'true',
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
   }
 });
 
-// Set up the Twilio client.
+// Set up Twilio client for WhatsApp alerts.
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
 
 /**
- * Sends an email alert about a new transaction.
+ * Sends an email alert about a new transaction using an HTML template.
+ * @param {Object} subscription - The subscription object containing the email.
  * @param {Object} transactionData - The transaction details.
  */
-function sendEmailAlert(transactionData) {
+function sendEmailAlert(subscription, transactionData) {
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2 style="color: #333;">Zcash Wallet Transaction Alert</h2>
+      <p>Hello,</p>
+      <p>A new transaction has been detected for your wallet <strong>${subscription.address}</strong>.</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr>
+          <th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">Field</th>
+          <th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">Value</th>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #ddd; padding: 8px;">Transaction ID</td>
+          <td style="border: 1px solid #ddd; padding: 8px;">${transactionData.txid}</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #ddd; padding: 8px;">Value</td>
+          <td style="border: 1px solid #ddd; padding: 8px;">${transactionData.value}</td>
+        </tr>
+      </table>
+      <p>For more details, please check your dashboard.</p>
+      <p>Thank you for using our service!</p>
+      <p>Best regards,<br/>Zcash Alert Service Team</p>
+    </div>
+  `;
+
   const mailOptions = {
     from: process.env.EMAIL_FROM,
-    to: process.env.EMAIL_TO,
+    to: subscription.email,
     subject: 'New Zcash Transaction Alert',
-    text: `A new transaction was detected:\n\n${JSON.stringify(transactionData, null, 2)}`
+    html: htmlContent
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
@@ -54,54 +80,147 @@ function sendEmailAlert(transactionData) {
 
 /**
  * Sends a WhatsApp alert using Twilio.
+ * @param {Object} subscription - The subscription object containing the WhatsApp number.
  * @param {Object} transactionData - The transaction details.
  */
-function sendWhatsappAlert(transactionData) {
+function sendWhatsappAlert(subscription, transactionData) {
   twilioClient.messages.create({
     from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
-    body: `New Zcash Transaction Detected: ${transactionData.txid}`,
-    to: `whatsapp:${process.env.TWILIO_WHATSAPP_TO}`
+    body: `Alert: New transaction for wallet ${subscription.address}.\nTransaction ID: ${transactionData.txid}\nValue: ${transactionData.value}`,
+    to: `whatsapp:${subscription.whatsapp}`
   })
     .then(message => console.log('WhatsApp message sent: ', message.sid))
     .catch(error => console.error('Error sending WhatsApp message: ', error));
 }
 
 /**
- * Polls the wallet API and checks for new transactions.
+ * Checks for new transactions for a given subscription.
+ * @param {String} subscriptionId - The unique subscription key from Firebase.
+ * @param {Object} subscription - The subscription object containing address, email, minValue, and whatsapp.
  */
-async function checkForNewTransactions() {
+async function checkSubscription(subscriptionId, subscription) {
+  const walletAddress = subscription.address;
+  const apiUrl = `https://sandbox-api.3xpl.com/zcash/address/${walletAddress}`;
+
   try {
-    const response = await axios.get(zcashWalletApi);
+    const response = await axios.get(apiUrl);
     const data = response.data;
-    // Assume the API returns an array called "transactions"
+    // Assume the API returns an array named "transactions"
     const transactions = data.transactions || [];
-    
+
     if (transactions.length === 0) {
-      console.log('No transactions found.');
+      console.log(`No transactions found for wallet ${walletAddress}`);
       return;
     }
-    
+
     // Assume the first transaction in the array is the latest.
     const latestTransaction = transactions[0];
-    
-    // If a new transaction is found, update the lastTransactionId and send alerts.
-    if (latestTransaction.txid !== lastTransactionId) {
-      console.log('New transaction detected:', latestTransaction.txid);
-      lastTransactionId = latestTransaction.txid;
-      sendEmailAlert(latestTransaction);
-      sendWhatsappAlert(latestTransaction);
+
+    // Initialize the last transaction if not set.
+    if (!lastTransactionMap[subscriptionId]) {
+      lastTransactionMap[subscriptionId] = latestTransaction.txid;
+      console.log(`Initialized wallet ${walletAddress} with transaction: ${latestTransaction.txid}`);
+      return;
+    }
+
+    // If a new transaction is detected.
+    if (latestTransaction.txid !== lastTransactionMap[subscriptionId]) {
+      // Check if the transaction meets the minimum value condition.
+      // Assumes that the transaction object contains a "value" field.
+      const txValue = parseFloat(latestTransaction.value || 0);
+      const minValue = parseFloat(subscription.minValue || 0);
+
+      if (txValue >= minValue) {
+        console.log(`New transaction for wallet ${walletAddress}: ${latestTransaction.txid}`);
+        lastTransactionMap[subscriptionId] = latestTransaction.txid;
+        sendEmailAlert(subscription, latestTransaction);
+        sendWhatsappAlert(subscription, latestTransaction);
+      } else {
+        console.log(`Transaction for wallet ${walletAddress} does not meet minValue. Detected value: ${txValue}`);
+        lastTransactionMap[subscriptionId] = latestTransaction.txid;
+      }
     }
   } catch (error) {
-    console.error('Error fetching wallet data:', error.message);
+    console.error(`Error fetching data for wallet ${walletAddress}: `, error.message);
   }
 }
 
-// Poll every 6 seconds.
-setInterval(checkForNewTransactions, 6000);
+/**
+ * Fetches alert subscriptions from Firebase and checks transactions for each.
+ */
+async function checkAllSubscriptions() {
+  try {
+    const response = await axios.get(firebaseAlertsUrl);
+    const subscriptionsData = response.data;
+
+    if (!subscriptionsData) {
+      console.log('No subscriptions found in Firebase.');
+      return;
+    }
+
+    // Iterate over each subscription from Firebase.
+    for (const subscriptionId in subscriptionsData) {
+      if (subscriptionsData.hasOwnProperty(subscriptionId)) {
+        const subscription = subscriptionsData[subscriptionId];
+        await checkSubscription(subscriptionId, subscription);
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching alert subscriptions:', error.message);
+  }
+}
+
+// Poll every 6 seconds to check for new transactions.
+setInterval(checkAllSubscriptions, 6000);
+
+/**
+ * Registration endpoint:
+ * Accepts a JSON body with 'email' and 'whatsapp' fields, then sends
+ * a confirmation email and WhatsApp message to confirm successful registration.
+ */
+app.post('/register', async (req, res) => {
+  const { email, whatsapp } = req.body;
+  if (!email || !whatsapp) {
+    return res.status(400).json({ error: 'Email and WhatsApp number are required.' });
+  }
+  try {
+    // Prepare registration email content.
+    const registrationHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2 style="color: #333;">Registration Successful</h2>
+        <p>Hello,</p>
+        <p>You have successfully registered for the <strong>Zcash Monitor Project</strong>.</p>
+        <p>Thank you for joining us. We will keep you updated with the latest alerts and insights from your wallet.</p>
+        <p>Best regards,<br/>Zcash Alert Service Team</p>
+      </div>
+    `;
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: 'Registration Confirmation for Zcash Monitor',
+      html: registrationHtml
+    };
+
+    // Send the confirmation email.
+    await transporter.sendMail(mailOptions);
+
+    // Send the confirmation WhatsApp message.
+    await twilioClient.messages.create({
+      from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
+      body: 'Registration Successful: You have successfully registered for the Zcash Monitor Project. Thank you for joining us!',
+      to: `whatsapp:${whatsapp}`
+    });
+
+    return res.status(200).json({ message: 'Registration confirmation sent via email and WhatsApp.' });
+  } catch (error) {
+    console.error('Error in registration:', error);
+    return res.status(500).json({ error: 'Error during registration process.' });
+  }
+});
 
 // Health check endpoint.
 app.get('/', (req, res) => {
-  res.send('Zcash Wallet Alert Service is running.');
+  res.send('Zcash Wallet Alert Service with Firebase subscriptions is running.');
 });
 
 // Start Express server.
