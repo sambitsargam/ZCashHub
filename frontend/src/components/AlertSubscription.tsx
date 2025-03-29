@@ -93,8 +93,8 @@ export const AlertSubscription: React.FC = () => {
             value={formData.minValue}
             onChange={(e) => setFormData({ ...formData, minValue: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            min="0.1"
-            step="0.1"
+            min="0.00001"
+            step="0.00001"
             required
           />
         </div>

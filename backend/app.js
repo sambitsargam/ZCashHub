@@ -3,9 +3,10 @@ const express = require('express');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
-
+const cors = require('cors');
 const app = express();
 app.use(express.json()); // To parse JSON request bodies
+app.use(cors()); // Enable CORS for all routes
 const port = process.env.PORT || 3000;
 
 // Firebase URL for alert subscriptions.
