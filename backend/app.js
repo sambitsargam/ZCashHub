@@ -98,52 +98,50 @@ function sendWhatsappAlert(subscription, transactionData) {
  * @param {String} subscriptionId - The unique subscription key from Firebase.
  * @param {Object} subscription - The subscription object containing address, email, minValue, and whatsapp.
  */
+
 async function checkSubscription(subscriptionId, subscription) {
   const walletAddress = subscription.address;
-  const apiUrl = `https://sandbox-api.3xpl.com/zcash/address/${walletAddress}`;
+  const apiUrl = `https://sandbox-api.3xpl.com/zcash/address/${walletAddress}?data=address,balances,events,mempool&from=all`;
 
   try {
     const response = await axios.get(apiUrl);
     const data = response.data;
-    // Assume the API returns an array named "transactions"
-    const transactions = data.transactions || [];
 
+    const transactions = data.data.events["zcash-main"] || [];
     if (transactions.length === 0) {
       console.log(`No transactions found for wallet ${walletAddress}`);
       return;
     }
 
-    // Assume the first transaction in the array is the latest.
-    const latestTransaction = transactions[0];
+    const latestTransaction = transactions[0]; 
+    const txid = latestTransaction.transaction;
+    const txValue = parseFloat(latestTransaction.effect.replace("+", "").replace("-", "")) / 1e8; 
 
-    // Initialize the last transaction if not set.
     if (!lastTransactionMap[subscriptionId]) {
-      lastTransactionMap[subscriptionId] = latestTransaction.txid;
-      console.log(`Initialized wallet ${walletAddress} with transaction: ${latestTransaction.txid}`);
+      lastTransactionMap[subscriptionId] = txid;
+      console.log(`Initialized wallet ${walletAddress} with transaction: ${txid}`);
       return;
     }
 
-    // If a new transaction is detected.
-    if (latestTransaction.txid !== lastTransactionMap[subscriptionId]) {
-      // Check if the transaction meets the minimum value condition.
-      // Assumes that the transaction object contains a "value" field.
-      const txValue = parseFloat(latestTransaction.value || 0);
+    if (txid !== lastTransactionMap[subscriptionId]) {
       const minValue = parseFloat(subscription.minValue || 0);
-
       if (txValue >= minValue) {
-        console.log(`New transaction for wallet ${walletAddress}: ${latestTransaction.txid}`);
-        lastTransactionMap[subscriptionId] = latestTransaction.txid;
-        sendEmailAlert(subscription, latestTransaction);
-        sendWhatsappAlert(subscription, latestTransaction);
+        console.log(`New transaction detected for ${walletAddress}: ${txid}`);
+        lastTransactionMap[subscriptionId] = txid;
+
+        sendEmailAlert(subscription, { txid, value: txValue });
+        sendWhatsappAlert(subscription, { txid, value: txValue });
       } else {
-        console.log(`Transaction for wallet ${walletAddress} does not meet minValue. Detected value: ${txValue}`);
-        lastTransactionMap[subscriptionId] = latestTransaction.txid;
+        console.log(`Transaction ${txid} does not meet minValue ${minValue}. Value: ${txValue}`);
+        lastTransactionMap[subscriptionId] = txid;
       }
     }
   } catch (error) {
-    console.error(`Error fetching data for wallet ${walletAddress}: `, error.message);
+    console.error(`Error fetching data for wallet ${walletAddress}:`, error.response?.data || error.message);
   }
 }
+
+    
 
 /**
  * Fetches alert subscriptions from Firebase and checks transactions for each.
