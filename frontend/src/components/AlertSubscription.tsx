@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState } from 'react';
 import { Bell, Mail, Phone } from 'lucide-react';
 import { subscribeToAlerts } from '../services/api';

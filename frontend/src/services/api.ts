@@ -28,13 +28,36 @@ export const getTransactionDetails = async (hash: string): Promise<TransactionDa
   return response.data.data;
 };
 
-export const subscribeToAlerts = async (subscription: {
+// services/api.ts
+
+export interface SubscriptionFormData {
   address: string;
   whatsapp: string;
   email: string;
   minValue: string;
-}) => {
-  // In a real app, this would call your backend
-  console.log('Subscribing to alerts:', subscription);
-  return subscription;
-};
+}
+
+export interface FirebaseResponse {
+  name: string; // Firebase returns a unique key under the property "name"
+}
+
+export async function subscribeToAlerts(
+  formData: SubscriptionFormData
+): Promise<FirebaseResponse> {
+  const response = await fetch(
+    'https://zcash-f9192-default-rtdb.firebaseio.com/alerts.json', // Firebase REST endpoint requires the .json suffix
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(formData)
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Error saving subscription details');
+  }
+
+  return response.json();
+}
