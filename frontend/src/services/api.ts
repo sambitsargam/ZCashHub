@@ -64,7 +64,7 @@ export async function subscribeToAlerts(
 
   // Send registration confirmation via Email & WhatsApp
   try {
-    await fetch('http://localhost:3000/register', {
+    await fetch('https://zcashhub.onrender.com/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
