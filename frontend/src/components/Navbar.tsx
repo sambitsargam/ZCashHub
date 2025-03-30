@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Wallet, Bell, Home } from 'lucide-react';
+import { Wallet, Bell, Home, Bot } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -14,7 +14,7 @@ export const Navbar: React.FC = () => {
           <div className="flex">
             <Link to="/" className="flex items-center gap-2">
               <Wallet className="h-6 w-6 text-purple-600" />
-              <span className="font-bold text-xl text-gray-900">ZCash Monitor</span>
+              <span className="font-bold text-xl text-gray-900">ZcashHub</span>
             </Link>
           </div>
           
@@ -51,6 +51,17 @@ export const Navbar: React.FC = () => {
             >
               <Bell className="h-4 w-4 mr-2" />
               Alerts
+            </Link>
+            <Link
+              to="/ai-agent"
+              className={`inline-flex items-center px-3 py-2 text-sm font-medium ${
+                isActive('/ai-agent')
+                  ? 'text-purple-600 border-b-2 border-purple-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Bot className="h-4 w-4 mr-2" />
+              AI Agent
             </Link>
           </div>
         </div>

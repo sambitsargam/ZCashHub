@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { LandingPage } from './pages/LandingPage';
 import { InsightsPage } from './pages/InsightsPage';
 import { AlertsPage } from './pages/AlertsPage';
+import { AIAgentPage } from './pages/AIAgentPage.tsx';
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/ai-agent" element={<AIAgentPage />} />
           </Routes>
         </div>
         <Toaster position="top-right" />

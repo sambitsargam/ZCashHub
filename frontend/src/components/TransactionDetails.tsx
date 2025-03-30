@@ -16,28 +16,6 @@ export const TransactionDetails: React.FC<Props> = ({ data, onClose, isOpen }) =
     return amount.toFixed(8);
   };
 
-  const calculateTotals = () => {
-    let totalSent = 0;
-    let totalReceived = 0;
-
-    data.events['zcash-main'].forEach(event => {
-      const amount = parseInt(event.effect);
-      if (amount > 0) {
-        totalReceived += amount;
-      } else {
-        totalSent += Math.abs(amount);
-      }
-    });
-
-    return {
-      sent: formatZEC(totalSent.toString()),
-      received: formatZEC(totalReceived.toString()),
-      fee: formatZEC((totalSent - totalReceived).toString())
-    };
-  };
-
-  const totals = calculateTotals();
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -68,38 +46,6 @@ export const TransactionDetails: React.FC<Props> = ({ data, onClose, isOpen }) =
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="bg-green-50 p-4 rounded-lg"
-                >
-                  <h3 className="text-sm font-medium text-green-800 mb-2">Total Received</h3>
-                  <p className="text-2xl font-bold text-green-600">{totals.received} ZEC</p>
-                </motion.div>
-
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="bg-red-50 p-4 rounded-lg"
-                >
-                  <h3 className="text-sm font-medium text-red-800 mb-2">Total Spend</h3>
-                  <p className="text-2xl font-bold text-red-600">{totals.sent} ZEC</p>
-                </motion.div>
-
-                {/* <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="bg-purple-50 p-4 rounded-lg"
-                >
-                  <h3 className="text-sm font-medium text-purple-800 mb-2">Network Fee</h3>
-                  <p className="text-2xl font-bold text-purple-600">{totals.fee} ZEC</p> 
-                </motion.div>  */}
-              </div>
-
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-gray-600">
                   <Hash className="h-5 w-5" />
