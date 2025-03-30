@@ -188,7 +188,7 @@ app.post('/register', async (req, res) => {
       <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h2 style="color: #333;">Registration Successful</h2>
         <p>Hello,</p>
-        <p>You have successfully registered for the <strong>Zcash Monitor Project</strong>.</p>
+        <p>You have successfully registered with <strong>Zcash Monitor</strong>.</p>
         <p>Thank you for joining us. We will keep you updated with the latest alerts and insights from your wallet.</p>
         <p>Best regards,<br/>Zcash Alert Service Team</p>
       </div>
@@ -206,7 +206,7 @@ app.post('/register', async (req, res) => {
     // Send the confirmation WhatsApp message.
     await twilioClient.messages.create({
       from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
-      body: 'Registration Successful: You have successfully registered for the Zcash Monitor Project. Thank you for joining us!',
+      body: 'Registration Successful: You have successfully registered with the Zcash Monitor. Thank you for joining us!',
       to: `whatsapp:${whatsapp}`
     });
 
@@ -226,3 +226,5 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });
+
+module.exports = app;
