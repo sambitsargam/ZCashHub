@@ -57,7 +57,7 @@ export const LandingPage: React.FC = () => {
                   onClick={() => navigate('/insights')}
                   className="inline-flex items-center px-8 py-4 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all transform hover:scale-105"
                 >
-                  Start Trading
+                  See Insights
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </button>
                 <button
