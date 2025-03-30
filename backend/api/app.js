@@ -153,7 +153,7 @@ async function checkAllSubscriptions() {
     const subscriptionsData = response.data;
 
     if (!subscriptionsData) {
-      console.log('No subscriptions found in Firebase.');
+     // console.log('No subscriptions found in Firebase.');
       return;
     }
 
