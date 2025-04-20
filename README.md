@@ -1,5 +1,8 @@
 # ZcashHub
 
+### Note
+``` * If you wanted to test this app , you need to run your own backend ```
+
 ZcashHub is a secure, AI-powered platform offering Zcash wallet insights, real-time alerts, and seamless asset swaps. Users can interact with an AI agent via WhatsApp or the web UI for effortless transactions and insights.
 
 ---
