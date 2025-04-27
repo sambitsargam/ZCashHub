@@ -10,7 +10,7 @@ app.use(cors()); // Enable CORS for all routes
 const port = process.env.PORT || 3000;
 
 // Firebase URL for alert subscriptions.
-const firebaseAlertsUrl = process.env.FIREBASE_ALERTS_URL || 'https://zcash-f9192-default-rtdb.firebaseio.com/alerts.json';
+const firebaseAlertsUrl = process.env.FIREBASE_ALERTS_URL;
 
 // Object to store the last seen transaction for each subscription (keyed by Firebase ID).
 const lastTransactionMap = {};
