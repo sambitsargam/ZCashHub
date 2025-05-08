@@ -102,7 +102,7 @@ function sendWhatsappAlert(subscription, transactionData) {
 
 async function checkSubscription(subscriptionId, subscription) {
   const walletAddress = subscription.address;
-  const apiUrl = `https://sandbox-api.3xpl.com/zcash/address/${walletAddress}?data=address,balances,events,mempool&from=all`;
+  const apiUrl = `https://sandbox-api.3xpl.com/zcash/address/${walletAddress}?data=address,balances,events&from=all`;
 
   try {
     const response = await axios.get(apiUrl);
